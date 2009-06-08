@@ -50,11 +50,12 @@ sub run {
     ) or pod2usage();
 
     pod2usage() unless ($config{model} && $config{fields});
-    
+
+    $config{model} = ucfirst($config{model});
+    $config{plural} = ucfirst($config{plural});    
     my %fields = parse_fields($config{fields});
-    print Dumper(%fields);
-    #$config{parsed_fields} = %fields;
-    #print singular(%config);
+    $config{parsed_fields} = \%fields;
+    singular(%config);
     #print Dumper(%config);
     
 }
@@ -68,6 +69,7 @@ sub parse_fields{
         my ($field, $value) = split(':', $l);
         croak "missing param or value" unless $field && $value;
         croak "invalid data type \'$value\' on $field" unless grep {$_ eq $value} @types;
+        $field = ucfirst $field;
         $return{$field} = $value;
     }
     return %return;
@@ -75,10 +77,13 @@ sub parse_fields{
 
 
 sub singular{
-
 my %config = @_;
+my %parsed = %{$config{parsed_fields}};
 
-
+my @use = grep { $parsed{$_} eq 'Class'} keys %parsed;
+my @fields = map {$_} keys %parsed;
+my $use_line = join("", map {"use $_;\n"} @use);
+my $fields_array = join("", map {"$_,\n        "} @fields);#note the spacing. must match the number of spaces in the $tmpl var in order to properly allign the fields
 
 my $tmpl = <<END;
 package $config{model};
@@ -87,8 +92,7 @@ use Jorge::Plugin::Md5;
 
 #Insert any dependencies here.
 #Example:
-<tmpl_loop name="classes">
-use <tmpl_var name="base_class">::<tmpl_var name="field">;</tmpl_loop>
+$use_line
 
 use strict;
 
@@ -97,7 +101,7 @@ sub _fields {
     my \$table_name = '$config{model}';
     
     my \@fields = qw(
-        $config{parsed_fields}
+        $fields_array
     );
 
     my \%fields = (

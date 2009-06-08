@@ -8,7 +8,7 @@ jorge-generate - Generates Jorge based Models
 
 use warnings;
 use strict;
-use lib '/work/git/jorge-generator/Jorge-Generator/lib';
+use lib 'lib';
 use Jorge::Generator::Model;
 
 Jorge::Generator::Model->run;
