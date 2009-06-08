@@ -18,7 +18,7 @@ our $VERSION = '0.01';
 use Data::Dumper;
 use Getopt::Long;
 use Pod::Usage;
-use Carp qw( croak );
+use Carp qw( croak cluck);
 
 =head1 FUNCTIONS
 
@@ -34,48 +34,30 @@ my @types = qw(
     text
     timestamp
     varchar
+    Class
 );
 
 
 sub run {
-
     pod2usage() unless @ARGV;
 
     my %config;
-
     GetOptions(
         'model=s'    => \$config{model},
         'plural=s'   => \$config{plural},
         'fields=s'   => \$config{fields},
         help         => sub { pod2usage(); },
     ) or pod2usage();
+
     pod2usage() unless ($config{model} && $config{fields});
     
     my %fields = parse_fields($config{fields});
     print Dumper(%fields);
+    #$config{parsed_fields} = %fields;
+    #print singular(%config);
+    #print Dumper(%config);
+    
 }
-
-=doc
-my %struct;
-my @types = qw(
-    bit
-    char
-    enum
-    int
-    text
-    timestamp
-    varchar
-    );
-
-foreach my $p (@params){
-    my ($field, $value) = split(':', $p);
-        die "missing param or value" unless $field && $value;
-        die "invalid data type $value on $field" unless grep {$_ eq $value} @types;
-    push(@{$struct{$value}}, $field);
-}
-
-print Dumper(%struct);
-=cut
 
 sub parse_fields{
     my $s = shift;
@@ -84,22 +66,55 @@ sub parse_fields{
     
     foreach my $l (@fields){
         my ($field, $value) = split(':', $l);
-        die "missing param or value" unless $field && $value;
-        die "invalid data type \'$value\' on $field" unless grep {$_ eq $value} @types;
+        croak "missing param or value" unless $field && $value;
+        croak "invalid data type \'$value\' on $field" unless grep {$_ eq $value} @types;
         $return{$field} = $value;
     }
     return %return;
 }
 
-#my ($action, $name) = split(':', shift @params);
-#    die "missing param or value" unless $action && $name;
 
-=head2 function2
+sub singular{
 
-=cut
+my %config = @_;
 
-sub function2 {
+
+
+my $tmpl = <<END;
+package $config{model};
+use base 'Jorge::DBEntity';
+use Jorge::Plugin::Md5;
+
+#Insert any dependencies here.
+#Example:
+<tmpl_loop name="classes">
+use <tmpl_var name="base_class">::<tmpl_var name="field">;</tmpl_loop>
+
+use strict;
+
+sub _fields {
+    
+    my \$table_name = '$config{model}';
+    
+    my \@fields = qw(
+        $config{parsed_fields}
+    );
+
+    my \%fields = (
+        Id => { pk => 1, read_only => 1 },<tmpl_loop name="classes">
+        <tmpl_var name="field"> => { class => new <tmpl_var name="base_class">::<tmpl_var name="field">},</tmpl_loop><tmpl_loop name="enum">
+#         <tmpl_var name="field"> => { values => qw(<tmpl_var name="values">)},</tmpl_loop><tmpl_loop name="timestamp">
+        <tmpl_var name="field"> => { datetime => 1},</tmpl_loop>
+    );
+
+    return [ \\\@fields, \\\%fields, \$table_name ];
 }
+
+1;
+END
+print $tmpl;
+}
+
 
 =head1 AUTHOR
 
