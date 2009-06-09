@@ -34,7 +34,7 @@ my @types = qw(
     text
     timestamp
     varchar
-    Class
+    class
 );
 
 
@@ -52,40 +52,25 @@ sub run {
     pod2usage() unless ($config{model} && $config{fields});
 
     $config{model} = ucfirst($config{model});
-    $config{plural} = ucfirst($config{plural});    
+    $config{plural} = ucfirst($config{plural});
     my %fields = parse_fields($config{fields});
+    $config{order} = $fields{_order};
+    #delete($fields{_order});#keep %fields clean
     $config{parsed_fields} = \%fields;
     singular(%config);
-    #print Dumper(%config);
     
 }
-
-sub parse_fields{
-    my $s = shift;
-    my @fields = split(/,/,$s);
-    my %return;
-    
-    foreach my $l (@fields){
-        my ($field, $value) = split(':', $l);
-        croak "missing param or value" unless $field && $value;
-        croak "invalid data type \'$value\' on $field" unless grep {$_ eq $value} @types;
-        $field = ucfirst $field;
-        $return{$field} = $value;
-    }
-    return %return;
-}
-
 
 sub singular{
-my %config = @_;
-my %parsed = %{$config{parsed_fields}};
+    my %config = @_;
+    my %parsed = %{$config{parsed_fields}};
 
-my @use = grep { $parsed{$_} eq 'Class'} keys %parsed;
-my @fields = map {$_} keys %parsed;
-my $use_line = join("", map {"use $_;\n"} @use);
-my $fields_array = join("", map {"$_,\n        "} @fields);#note the spacing. must match the number of spaces in the $tmpl var in order to properly allign the fields
-
-my $tmpl = <<END;
+    my @use = grep { $parsed{$_} eq 'Class'} keys %parsed;
+    my @fields = map {$_} keys %parsed;
+    my $use_line = join("", map {"use $_;\n"} @use);
+    my $fields_array = join("", map {"$_,\n        "} @fields);#note the spacing. must match the number of spaces in the $tmpl var in order to properly allign the fields
+    @{$config{order}};
+    my $tmpl = <<END;
 package $config{model};
 use base 'Jorge::DBEntity';
 use Jorge::Plugin::Md5;
@@ -116,7 +101,25 @@ sub _fields {
 
 1;
 END
-print $tmpl;
+
+    print $tmpl;
+}
+
+
+sub parse_fields{
+    my $s = shift;
+    my @fields = split(/,/,$s);
+    my %return;
+    
+    foreach my $l (@fields){
+        my ($field, $value) = split(':', $l);
+        croak "missing param or value" unless $field && $value;
+        croak "invalid data type \'$value\' on $field" unless grep {$_ eq $value} @types;
+        $field = ucfirst $field;
+        $return{$field} = $value;
+        push(@{$return{_order}}, $field);
+    }
+    return %return;
 }
 
 
