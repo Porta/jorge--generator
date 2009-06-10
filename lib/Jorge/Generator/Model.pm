@@ -27,51 +27,77 @@ use Carp qw( croak cluck);
 =cut
 
 my @types = qw(
-    bit
-    char
-    enum
-    int
-    text
-    timestamp
-    varchar
-    class
+  bit
+  char
+  enum
+  int
+  text
+  timestamp
+  datetime
+  varchar
+  pk
 );
-
 
 sub run {
     pod2usage() unless @ARGV;
 
     my %config;
     GetOptions(
-        'model=s'    => \$config{model},
-        'plural=s'   => \$config{plural},
-        'fields=s'   => \$config{fields},
-        help         => sub { pod2usage(); },
+        'model=s'  => \$config{_model},
+        'plural=s' => \$config{_plural},
+        'fields=s' => \$config{_fields},
+        help       => sub { pod2usage(); },
     ) or pod2usage();
 
-    pod2usage() unless ($config{model} && $config{fields});
+    pod2usage() unless ( $config{_model} && $config{_fields} );
 
-    $config{model} = ucfirst($config{model});
-    $config{plural} = ucfirst($config{plural});
-    my %fields = parse_fields($config{fields});
-    $config{order} = $fields{_order};
-    #delete($fields{_order});#keep %fields clean
-    $config{parsed_fields} = \%fields;
+    $config{_model}  = ucfirst( $config{_model} );
+    $config{_plural} = ucfirst( $config{_plural} );
+
+    #now, parse the fields we received.
+    my @fields = split( /,/, $config{_fields} );
+    foreach my $f (@fields) {
+        my ( $field, $value ) = split( ':', $f );
+        croak "missing param or value" unless $field && $value;
+        
+        my $its_a_class = $value =~ m/[A-Z](.*)/;
+        croak "invalid data type \'$value\' on $field"
+          if !( grep { $_ eq $value } @types or $its_a_class );
+
+        $value = ucfirst $value;
+        $field = ucfirst $field;
+
+        if ($its_a_class){
+            push( @{ $config{_classes} }, $value );
+        }
+        
+        $config{$field} = $value;
+        push( @{ $config{_order} }, $field );
+    }    
     singular(%config);
-    
+
 }
 
-sub singular{
-    my %config = @_;
-    my %parsed = %{$config{parsed_fields}};
 
-    my @use = grep { $parsed{$_} eq 'Class'} keys %parsed;
-    my @fields = map {$_} keys %parsed;
-    my $use_line = join("", map {"use $_;\n"} @use);
-    my $fields_array = join("", map {"$_,\n        "} @fields);#note the spacing. must match the number of spaces in the $tmpl var in order to properly allign the fields
-    @{$config{order}};
+sub singular {
+    my %config = @_;
+    my @use = @{$config{_classes}};
+    my @fields_raw = @{$config{_order}};
+    my $use_line = join( "", map { "use $_;\n" } @use );
+    my @fields = grep { $config{$_} =~ m/[a-z]+/ } @fields_raw;
+    
+    my $fields_list = join( ",\n        ", map { $_ } @fields );
+    #note the spacing. must match the number of spaces in the $tmpl var in
+    # order to properly allign the fields
+    my @pks = grep { $config{$_} eq 'Pk' } @fields;
+    my @datetimes = grep { $config{$_} eq 'Timestamp' ||  $config{$_} eq 'Datetime' } @fields;
+    my $pks_line = join("", map { "$_ => { pk => 1, read_only => 1 },\n" } @pks);
+    my $datetime_line = join("", map { "$_ => { datetime => 1 },\n" } @datetimes);
+    
+    print Dumper($pks_line);
+    
     my $tmpl = <<END;
-package $config{model};
+package $config{_model};
 use base 'Jorge::DBEntity';
 use Jorge::Plugin::Md5;
 
@@ -83,14 +109,15 @@ use strict;
 
 sub _fields {
     
-    my \$table_name = '$config{model}';
+    my \$table_name = '$config{_model}';
     
     my \@fields = qw(
-        $fields_array
+        $fields_list
     );
 
     my \%fields = (
-        Id => { pk => 1, read_only => 1 },<tmpl_loop name="classes">
+        $pks_line
+        $datetime_line
         <tmpl_var name="field"> => { class => new <tmpl_var name="base_class">::<tmpl_var name="field">},</tmpl_loop><tmpl_loop name="enum">
 #         <tmpl_var name="field"> => { values => qw(<tmpl_var name="values">)},</tmpl_loop><tmpl_loop name="timestamp">
         <tmpl_var name="field"> => { datetime => 1},</tmpl_loop>
@@ -103,23 +130,6 @@ sub _fields {
 END
 
     print $tmpl;
-}
-
-
-sub parse_fields{
-    my $s = shift;
-    my @fields = split(/,/,$s);
-    my %return;
-    
-    foreach my $l (@fields){
-        my ($field, $value) = split(':', $l);
-        croak "missing param or value" unless $field && $value;
-        croak "invalid data type \'$value\' on $field" unless grep {$_ eq $value} @types;
-        $field = ucfirst $field;
-        $return{$field} = $value;
-        push(@{$return{_order}}, $field);
-    }
-    return %return;
 }
 
 
@@ -179,4 +189,5 @@ under the same terms as Perl itself.
 
 =cut
 
-1; # End of Jorge::Generator::Model
+1;    # End of Jorge::Generator::Model
+
