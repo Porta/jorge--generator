@@ -80,21 +80,21 @@ sub run {
 
 
 sub singular {
-    my %config = @_;
-    my @use = @{$config{_classes}};
-    my @fields_raw = @{$config{_order}};
-    my $use_line = join( "", map { "use $_;\n" } @use );
-    my @fields = grep { $config{$_} =~ m/[a-z]+/ } @fields_raw;
+    my %config      = @_;
+    my @use         = @{$config{_classes}};
+    my @fields_raw  = @{$config{_order}};
+    my $use_line    = join( "", map { "use $_;\n" } @use );
+    my @fields      = grep { $config{$_} =~ m/[a-z]+/ } @fields_raw;
     
     my $fields_list = join( ",\n        ", map { $_ } @fields );
     #note the spacing. must match the number of spaces in the $tmpl var in
     # order to properly allign the fields
     my @pks = grep { $config{$_} eq 'Pk' } @fields;
-    my @datetimes = grep { $config{$_} eq 'Timestamp' ||  $config{$_} eq 'Datetime' } @fields;
-    my $pks_line = join("", map { "$_ => { pk => 1, read_only => 1 },\n" } @pks);
-    my $datetime_line = join("", map { "$_ => { datetime => 1 },\n" } @datetimes);
+    my @datetimes       = grep { $config{$_} eq 'Timestamp' ||  $config{$_} eq 'Datetime' } @fields;
+    my $pks_line        = join("\n        ", map { "$_ => { pk => 1, read_only => 1 }," } @pks);
+    my $datetime_line   = join("\n        ", map { "$_ => { datetime => 1 }," } @datetimes);
+    my $classes_line    = join("\n        ", map { "$_ => { class => new $_() }," } @use);
     
-    print Dumper($pks_line);
     
     my $tmpl = <<END;
 package $config{_model};
@@ -118,9 +118,7 @@ sub _fields {
     my \%fields = (
         $pks_line
         $datetime_line
-        <tmpl_var name="field"> => { class => new <tmpl_var name="base_class">::<tmpl_var name="field">},</tmpl_loop><tmpl_loop name="enum">
-#         <tmpl_var name="field"> => { values => qw(<tmpl_var name="values">)},</tmpl_loop><tmpl_loop name="timestamp">
-        <tmpl_var name="field"> => { datetime => 1},</tmpl_loop>
+        $classes_line
     );
 
     return [ \\\@fields, \\\%fields, \$table_name ];
