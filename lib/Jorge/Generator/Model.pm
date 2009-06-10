@@ -90,9 +90,9 @@ sub run {
         
         $config{$field} = $value;
         push( @{ $config{_order} }, $field );
-    }    
-    singular(%config);
-    plural(%config);
+    }
+    write_file($config{_model}, singular(%config));
+    write_file($config{_plural}, plural(%config));
 
 }
 
@@ -155,7 +155,7 @@ CREATE TABLE IF NOT EXISTS `$config{_model}` (
 
 END
 
-    print $tmpl;
+    return $tmpl;
 }
 
 
@@ -176,9 +176,18 @@ sub create_object {
 
 1;
 END
-    print $tmpl;
+    return $tmpl;
 }
 
+
+sub write_file {
+    my ($file, $tmpl) = @_;
+    my $path = $file . '.pm';
+    open( TEMPLATE, ">", $path ) || die "Can't create file $path $!";
+    print TEMPLATE $tmpl;
+    close(TEMPLATE);
+    return 1;
+}
 
 =head1 AUTHOR
 
