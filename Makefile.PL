@@ -7,7 +7,7 @@ WriteMakefile(
     AUTHOR              => 'Julián Porta <julian.porta@gmail.com>',
     VERSION_FROM        => 'lib/Jorge/Generator.pm',
     ABSTRACT_FROM       => 'lib/Jorge/Generator.pm',
-    EXE_FILES           => 'bin/jorge-generate',
+    EXE_FILES           => ['bin/jorge-generate'],
     ($ExtUtils::MakeMaker::VERSION >= 6.3002
       ? ('LICENSE'=> 'perl')
       : ()),
