@@ -23,12 +23,12 @@ Options:
 
     --model=ModelName               (required)
     --plural=ModelNames             (optional, defaults to ModelName . 's')
-    --fields=FieldName:datatype     (required, repeatable)
+    --fields=fieldName:datatype     (required, repeatable)
 
 Example:
 
     jorge-generate --model=User \
-        --fields=Id:int,Name:varchar,Email:varchar,Date:timestamp,Active:bit
+        --fields=id:pk,name:varchar,email:varchar,date:timestamp,active:bit
 
 =head1 DESCRIPTION
 
