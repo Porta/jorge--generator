@@ -9,11 +9,11 @@ Jorge::Generator::Model - Jorge based Models generator. Runs with jorge-generate
 
 =head1 VERSION
 
-Version 0.01
+Version 0.02
 
 =cut
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 use Data::Dumper;
 use Getopt::Long;
@@ -99,7 +99,7 @@ sub run {
 
 sub singular {
     my %config      = @_;
-    my @use         = @{$config{_classes}};
+        my @use         = @{$config{_classes}} if defined $config{_classes};
     my @fields_raw  = @{$config{_order}};
     my $use_line    = join( "", map { "use $_;\n" } @use );
     my @fields      = grep { $config{$_} =~ m/[a-z]+/ } @fields_raw;
