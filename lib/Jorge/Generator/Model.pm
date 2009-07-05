@@ -13,7 +13,7 @@ Version 0.02
 
 =cut
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 
 use Data::Dumper;
 use Getopt::Long;
@@ -104,7 +104,7 @@ sub singular {
     my $use_line    = join( "", map { "use $_;\n" } @use );
     my @fields      = grep { $config{$_} =~ m/[a-z]+/ } @fields_raw;
     
-    my $fields_list = join( ",\n        ", map { $_ } @fields );
+    my $fields_list = join( "\n        ", map { $_ } @fields );
     #note the spacing. must match the number of spaces in the $tmpl var in
     # order to properly allign the fields
     my @pks = grep { $config{$_} eq 'Pk' } @fields;
